@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  isActive      Boolean        @default(false)
+  lastLogin     DateTime       @default(now())
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now())
+  workspaces    Workspace[]    @relation("WorkspaceOwner")
+  projects      Project[]
+  tasksCreated  Task[]         @relation("TaskCreatedBy")
+  tasksAssigned Task[]         @relation("TaskAssignedTo")
+  members       Member[]
+  comments      Comment[]
+  files         File[]
+  notifications Notification[]
+  roles         UserRole[]     @relation("UserRoles")
+  profile       Profile?       @relation(fields: [profileId], references: [id])
+  profileId     String?        @unique
+}
+
+model Profile {
+  id       String  @id @default(uuid())
+  imageUrl String
+  user     User?
+  userId   String? @unique
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  inviteCode  String   @unique
+  createdAt   DateTime @default(now())
+
+  owner    User      @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  ownerId  String
+  projects Project[]
+  tasks    Task[]
+  members  Member[]
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  emoji       String
+  description String
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  tasks       Task[]
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  taskCode    String
+  title       String
+  description String
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(LOW)
+  dueDate     DateTime?
+
+  assignee    User?     @relation("TaskAssignedTo", fields: [assigneeId], references: [id])
+  assigneeId  String?
+  createdBy   User?     @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdById String?
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+
+  comments Comment[]
+  files    File[]
+  subtasks Subtask[]
+}
+
+model Member {
+  id         String   @id @default(uuid())
+  joinedDate DateTime @default(now())
+  role       Role     @default(MEMBER)
+
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspaceId String
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  task   Task   @relation(fields: [taskId], references: [id])
+  taskId String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model File {
+  id         String   @id @default(uuid())
+  fileName   String
+  fileUrl    String
+  uploadedAt DateTime @default(now())
+
+  task   Task?   @relation(fields: [taskId], references: [id])
+  taskId String?
+  user   User    @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Subtask {
+  id        String     @id @default(uuid())
+  title     String
+  status    TaskStatus @default(TODO)
+  createdAt DateTime   @default(now())
+
+  parentTask   Task   @relation(fields: [parentTaskId], references: [id])
+  parentTaskId String
+}
+
+model UserRole {
+  id         String       @id @default(uuid())
+  role       Role
+  permission Permission[] @default([]) //permission contain array of enum
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  users      User[]       @relation("UserRoles")
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  OWNER
+  VIEWER
+}
+
+enum Permission {
+  CREATE_WORKSPACE
+  DELETE_WORKSPACE
+  EDIT_WORKSPACE
+  MANAGE_WORKSPACE_SETTINGS
+  ADD_MEMBER
+  CHANGE_MEMBER_ROLE
+  REMOVE_MEMBER
+  CREATE_PROJECT
+  DELETE_PROJECT
+  EDIT_PROJECT
+  CREATE_TASK
+  EDIT_TASK
+  DELETE_TASK
+  VIEW_ONLY
+}
