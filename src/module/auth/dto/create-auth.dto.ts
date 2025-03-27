@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator"
+import { IsNotEmpty, IsOptional, IsString } from "class-validator"
 import { Role } from "@prisma/client";
 // import { Permission } from "../entities/permission.entity";
 import { Permission } from '@prisma/client';
@@ -12,13 +12,13 @@ export class CreateAuthDto {
   @IsString()
   email: string;
 
-
   @IsNotEmpty()
   @IsString()
   password: string;
 
-  role:Role
-  permission:Permission
+  role: Role;
+  
+  permission: Permission;
 }
 
 
