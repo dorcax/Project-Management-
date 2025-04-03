@@ -1,18 +1,28 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException
+} from '@nestjs/common';
 import { CreateAuthDto, LoginAuthDto } from './dto/create-auth.dto';
 import { PrismaService } from 'src/prisma.services';
-import  * as argon2 from "argon2"
+import * as argon2 from 'argon2';
 import { JwtService } from '@nestjs/jwt';
+import { ownerDefaultPermissions, Role } from './entities/role.entity';
+import { WorkspaceService } from '../workspace/workspace.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly workspaceService: WorkspaceService,
   ) {}
   async create(createAuthDto: CreateAuthDto) {
     try {
-      const { name, email, password, role, permission } = createAuthDto;
+      const { name, email, password } = createAuthDto;
       // find if user already registered
       const existingUser = await this.prisma.user.findUnique({
         where: {
@@ -33,17 +43,43 @@ export class AuthService {
           password: hashedPassword,
           roles: {
             create: {
-              role: role,
-              permission: [permission],
+              role: [Role.OWNER],
+              permission: ownerDefaultPermissions,
+            },
+          },
+        },
+        include: {
+          roles: true,
+        },
+      });
+      // const { password: _, ...rest } = newUser;
+      // create new workspcae
+      const inviteCode = await this.workspaceService.generateInviteCode();
+      const workspace = await this.prisma.workspace.create({
+        data: {
+          name: 'My workspace',
+          description: `workspace created for ${newUser.name}`,
+          inviteCode: inviteCode,
+          owner: {
+            connect: {
+              id: newUser.id,
             },
           },
         },
       });
-      const { password: _, ...rest } = newUser;
-      return { user: rest };
+
+      // create a new membership for the user
+      const member = await this.prisma.member.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: newUser.id,
+          role:[Role.OWNER],
+        },
+      });
+      return { message: 'user successfully registered' };
     } catch (error) {
       console.log(error);
-      throw new InternalServerErrorException('something went wrong');
+      throw new InternalServerErrorException(error.message ||'something went wrong');
     }
   }
 
@@ -69,14 +105,14 @@ export class AuthService {
       // verify thhe password
       const isMatch = await argon2.verify(existingUser.password, password);
       if (!isMatch) throw new UnauthorizedException('invalid credentials');
-      const token =await this.generateJwt(existingUser)
+      const token = await this.generateJwt(existingUser);
       return {
         user: existingUser,
         token: token,
       };
     } catch (error) {
       console.log(error);
-      throw new InternalServerErrorException('ssomething went wrong');
+      throw new InternalServerErrorException('something went wrong');
     }
   }
 
@@ -86,41 +122,100 @@ export class AuthService {
 
   //  validate user if user is already in our database
   async validateGoogleUser(googleUser: CreateAuthDto) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email: googleUser.email,
-      },
-      include: { roles: true },
-    });
-    if (user) return user;
-    return await this.prisma.user.create({
-      data: {
-        email: googleUser.email,
-        name: googleUser.name,
-        password: googleUser.password,
-        roles: {
-          create: {
-            role: googleUser.role,
-            permission: [googleUser.permission],
+  try {
+      if (!googleUser.email || !googleUser.name) {
+        throw new BadRequestException(
+          'Google user must have an email and name',
+        );
+      }
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: googleUser.email,
+        },
+        include: { roles: true },
+      });
+      if (user) return user;
+      const newUser = await this.prisma.user.create({
+        data: {
+          email: googleUser.email,
+          name: googleUser.name,
+          password: '',
+          roles: {
+            create: {
+              role: [Role.OWNER],
+              permission: ownerDefaultPermissions,
+            },
           },
         },
-      },
-    });
+        include: {
+          roles: true,
+        },
+      });
+      console.log('New User:', newUser);
+
+      // create new workspcae
+      const inviteCode = await this.workspaceService.generateInviteCode();
+      const workspace = await this.prisma.workspace.create({
+        data: {
+          name: 'My workspace',
+          description: `workspace created for ${newUser.name}`,
+          inviteCode: inviteCode,
+          owner: {
+            connect: {
+              id: newUser.id,
+            },
+          },
+        },
+      });
+
+      // create a new membership for the user
+      const userRole =
+        newUser.roles.length > 0 ? newUser.roles[0].role : undefined;
+      const member = await this.prisma.member.create({
+        data: {
+          workspaceId: workspace.id,
+          userId: newUser.id,
+          role: userRole,
+        },
+      });
+      console.log('workspace', workspace);
+      console.log('member', member);
+      return { message: 'user logged in', workspace, member };
+  } catch (error) {
+      console.error('Workspace/Member Creation Error:', error);
+      throw new InternalServerErrorException(
+        'Failed to create workspace or member',
+      );
   }
+   }
 
   async generateJwt(existingUser: any) {
     // Extract roles and permissions
-     console.log("User object in generateJwt:", existingUser);
+    // console.log('User object in generateJwt:', existingUser);
     const roles = existingUser.roles.map((role) => role.role);
-    console.log('roles', roles);
+   
+   
     const permissions = existingUser.roles.flatMap((role) => role.permission);
-    console.log("permissions",permissions)
+    // console.log('permissions', permissions);
     const payload = {
+      sub: existingUser.id,
       email: existingUser.email,
-      name: existingUser.name,
-      roles,
+      roles:roles,
       permissions,
     };
-    return this.jwt.signAsync(payload); // JWT expires in 2 hours
+    //  console.log('roles', payload);
+    return this.jwt.signAsync(payload); 
+  }
+
+
+  async findallUser(){
+    const users =await this.prisma.user.findMany({
+      include:{
+        members:true,
+        workspaces:true,
+        roles:true
+      }
+    })
+    return users
   }
 }

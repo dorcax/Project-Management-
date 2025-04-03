@@ -12,13 +12,12 @@ export class CreateAuthDto {
   @IsString()
   email: string;
 
-  @IsNotEmpty()
+  // @IsOptional()
   @IsString()
   password: string;
 
-  role: Role;
-  
-  permission: Permission;
+  // role: Role;
+  // permission: Permission[];
 }
 
 

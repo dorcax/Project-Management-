@@ -4,6 +4,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, VerifyCallback } from "passport-google-oauth20";
 import googleOauth from "src/module/config/google-oauth";
 import { AuthService } from "../auth.service";
+import { ownerDefaultPermissions, Role } from "../entities/role.entity";
 
 
 
@@ -32,23 +33,49 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
   }
 
   //   verify
-  async validate(
-    request: any,
-    accessToken: string,
-    refreshToken: string,
-    profile: any,
-    done: VerifyCallback,
-  ) {
-    console.log({ profile });
-    const user = await this.authService.validateGoogleUser({
-      email: profile._json?.email,
-      name: profile.displayName,
-      password: 'mypassword',
-      role: 'MEMBER',
-      permission: 'VIEW_ONLY',
-    });
-    done(null, user);
+//   async validate(
+//     request: any,
+//     accessToken: string,
+//     refreshToken: string,
+//     profile: any,
+//     done: VerifyCallback,
+//   ) {
+//     console.log({ profile });
+//     const user = await this.authService.validateGoogleUser({
+//       email: profile._json?.email,
+//       name: profile.displayName,
+//       password: 'mypassword'
+//     });
+//     done(null, user);
+//   }
+// }
+
+
+
+async validate(
+  request: any,
+  accessToken: string,
+  refreshToken: string,
+  profile: any,
+  done: VerifyCallback,
+) {
+  console.log({ profile });
+
+  const email = profile._json?.email;
+  const name = profile.displayName;
+
+  if (!email || !name) {
+    return done(new Error('Google profile is missing required fields'));
   }
+
+  const user = await this.authService.validateGoogleUser({
+    email,
+    name,
+    password:"string"
+  });
+
+  done(null, user);
+}
 }
 
 

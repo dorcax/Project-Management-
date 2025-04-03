@@ -40,6 +40,10 @@ export class AuthController {
   findOne() {
     return this.authService.findOne();
   }
+  @Get("alluser")
+  findAllUser(){
+    return this.authService.findallUser()
+  }
 
   //  oauth authentication
 
@@ -51,17 +55,17 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @Get('google/callback')
   async googleCallback(@Req() req) {
-    console.log('User Data:', req.user);
-     // Contains user + accessToken
+    console.log('Google User Data:', req.user);
 
-    // Generate JWT for OAuth user if needed
     const jwt = await this.authService.generateJwt(req.user);
-    console.log("jwt",jwt)
+    console.log('Generated JWT:', jwt);
+
+    const user = await this.authService.validateGoogleUser(req.user);
+
     return {
       message: 'Google login successful',
-      //  accessToken: req.user.accessToken, // Google access token
-      // jwtToken: jwt,
-      // user: req.user,
+      jwtToken: jwt,
+      user,
     };
   }
 
@@ -69,4 +73,7 @@ export class AuthController {
   validateGoogleUser(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.validateGoogleUser(createAuthDto);
   }
+
+
+
 }

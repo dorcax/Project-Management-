@@ -47,7 +47,8 @@ export class RoleGuard implements CanActivate {
     if (
       requiredPermissions &&
       !requiredPermissions.some((permission) =>
-        user.permissions?.includes(permission),
+        user.permissions?.includes(permission.trim()),
+      
       )
     ) {
       throw new ForbiddenException('Access Denied: Insufficient permission');
