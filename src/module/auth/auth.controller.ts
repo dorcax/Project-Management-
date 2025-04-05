@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto, LoginAuthDto } from './dto/create-auth.dto';
@@ -36,10 +37,14 @@ export class AuthController {
 
   @Get('one')
   @UseGuards(AuthGuard, RoleGuard)
-  @RolesandPermissions([Role.ADMIN, Role.OWNER], [Permission.CREATE_PROJECT])
+  @RolesandPermissions([Role.OWNER], [Permission.CREATE_PROJECT])
   findOne() {
     return this.authService.findOne();
   }
+
+
+
+
   @Get("alluser")
   findAllUser(){
     return this.authService.findallUser()

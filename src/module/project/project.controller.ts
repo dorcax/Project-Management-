@@ -1,34 +1,64 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { AuthGuard } from '../auth/guards/AuthGuard';
+import { RoleGuard } from '../auth/guards/role.guard';
+import { RolesandPermissions } from '../auth/decorator/role.decorator';
+import { Role } from '../auth/entities/role.entity';
+import { Permission } from '../auth/entities/permission.entity';
+import { Workspace } from '../workspace/entities/workspace.entity';
 
 @Controller('project')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
+  @UseGuards(AuthGuard, RoleGuard)
+  @RolesandPermissions([Role.OWNER], [Permission.CREATE_PROJECT])
   @Post()
-  create(@Body() createProjectDto: CreateProjectDto) {
-    return this.projectService.create(createProjectDto);
+  create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
+    return this.projectService.create(createProjectDto, req);
+
   }
 
-  @Get()
-  findAll() {
-    return this.projectService.findAll();
+  @UseGuards(AuthGuard, RoleGuard)
+  @RolesandPermissions([Role.OWNER, Role.ADMIN], [Permission.EDIT_PROJECT])
+  @Get(':workspaceId')
+  findAll(@Param('workspaceId') workspaceId: string, @Req() req) {
+    return this.projectService.findAllProjects(workspaceId, req);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.projectService.findOne(+id);
+  @UseGuards(AuthGuard, RoleGuard)
+  @RolesandPermissions([Role.OWNER, Role.ADMIN], [Permission.EDIT_PROJECT])
+  @Get(':workspace/:projectId')
+  findOne(
+
+    @Param('workspace') WorkspaceId: string,
+    @Req() req,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.projectService.findOne(WorkspaceId, projectId, req);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProjectDto: UpdateProjectDto) {
-    return this.projectService.update(+id, updateProjectDto);
+  @UseGuards(AuthGuard, RoleGuard)
+  @RolesandPermissions([Role.OWNER, Role.ADMIN], [Permission.EDIT_PROJECT])
+  @Patch(':projectId')
+  update(
+    @Req() req,
+    @Param('projectId') projectId: string,
+    @Body() updateProjectDto: UpdateProjectDto,
+  ) {
+    return this.projectService.updateProject(projectId, req, updateProjectDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.projectService.remove(+id);
+  @UseGuards(AuthGuard, RoleGuard)
+  @RolesandPermissions([Role.OWNER, Role.ADMIN], [Permission.DELETE_PROJECT])
+  @Delete(':workspace/:projectId')
+  remove(
+    @Param('workspace') WorkspaceId: string,
+    @Req() req,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.projectService.removeProject(WorkspaceId, projectId, req);
   }
 }

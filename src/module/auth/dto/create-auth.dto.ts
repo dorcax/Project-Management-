@@ -8,9 +8,13 @@ export class CreateAuthDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   email: string;
+  
+  @IsOptional()
+  @IsString()
+  inviteCode?: string;
 
   // @IsOptional()
   @IsString()

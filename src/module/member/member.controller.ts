@@ -1,16 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query ,Req, UseGuards} from '@nestjs/common';
 import { MemberService } from './member.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { AuthGuard } from '../auth/guards/AuthGuard';
+import { RoleGuard } from '../auth/guards/role.guard';
+import { RolesandPermissions } from '../auth/decorator/role.decorator';
 
 @Controller('member')
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
-
-  @Post()
-  create(@Body() createMemberDto: CreateMemberDto) {
-    return this.memberService.joinAWorkspaceByInvite(createMemberDto);
-  }
+  
+  // @UseGuards(AuthGuard)
+  // // @RolesandPermissions()
+  // @Post()
+  // create(@Body() createMemberDto:CreateMemberDto,@Req() req) {
+  //   const userId=req.user.sub
+  //   return this.memberService.joinAWorkspaceByInvite(createMemberDto,userId);
+  // }
 
   @Get()
   findAll() {

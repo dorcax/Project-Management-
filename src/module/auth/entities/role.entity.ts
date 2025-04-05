@@ -1,4 +1,5 @@
 import { Permission } from '@prisma/client';
+import { permission } from 'process';
 // import { Permission } from "./permission.entity";
 
 export enum Role {
@@ -7,6 +8,15 @@ export enum Role {
   MEMBER = 'MEMBER',
   VIEWER = 'VIEWER',
 }
+
+
+ export const memberDefaultPermission:Permission[] =[
+    Permission.VIEW_ONLY,
+    Permission.CREATE_TASK,
+    Permission.EDIT_TASK,
+  ]
+
+
 
 export const ownerDefaultPermissions: Permission[] = [
   Permission.ADD_MEMBER,
@@ -22,4 +32,5 @@ export const ownerDefaultPermissions: Permission[] = [
   Permission.CREATE_TASK,
   Permission.EDIT_TASK,
   Permission.DELETE_TASK,
+  Permission.VIEW_ONLY
 ];
