@@ -18,17 +18,27 @@ export class TaskController {
   }
 
   @Get(':projectId/taskId')
-  findOne(@Param('taskId') taskId: string, @Param('projectId') projectId: string) {
-    return this.taskService.findOne(projectId,taskId);
+  findOne(
+    @Param('taskId') taskId: string,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.taskService.findOne(projectId, taskId);
   }
 
   @Patch(':taskId')
-  update(@Param('taskId') taskId: string, @Body() updateTaskDto: UpdateTaskDto) {
-    return this.taskService.update(taskId, updateTaskDto);
+  update(
+    @Param('taskId') taskId: string,
+    @Body() updateTaskDto: UpdateTaskDto,
+    @Req() req,
+  ) {
+    return this.taskService.update(taskId, updateTaskDto, req);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.taskService.remove(+id);
+  @Delete(':projectId/taskId')
+  remove(
+    @Param('taskId') taskId: string,
+    @Param('projectId') projectId: string,
+  ) {
+    return this.taskService.remove(projectId,taskId);
   }
 }
