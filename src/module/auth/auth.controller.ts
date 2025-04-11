@@ -18,7 +18,7 @@ import { RoleGuard } from './guards/role.guard';
 import { RolesandPermissions } from './decorator/role.decorator';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
-import { Public } from '@prisma/client/runtime/library';
+
 import { GoogleAuthGuard } from './guards/google-auth/google-auth.guard';
 
 @Controller('auth')
@@ -36,8 +36,8 @@ export class AuthController {
   }
 
   @Get('one')
-  @UseGuards(AuthGuard, RoleGuard)
-  @RolesandPermissions([Role.OWNER], [Permission.CREATE_PROJECT])
+  // @UseGuards(AuthGuard, RoleGuard)
+  // @RolesandPermissions([Role.OWNER], [Permission.CREATE_PROJECT])
   findOne() {
     return this.authService.findOne();
   }

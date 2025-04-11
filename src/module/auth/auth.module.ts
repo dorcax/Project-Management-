@@ -8,6 +8,7 @@ import googleOauth from '../config/google-oauth';
 import { GoogleStrategy } from './strategy/google-strategy';
 import { WorkspaceModule } from '../workspace/workspace.module';
 import { MemberModule } from '../member/member.module';
+import { TokenService } from './token-verify.service';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { MemberModule } from '../member/member.module';
     ConfigModule.forFeature(googleOauth),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PrismaService, GoogleStrategy],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService,TokenService, PrismaService, GoogleStrategy],
+  exports: [AuthService, JwtModule,TokenService],
 })
 export class AuthModule {}

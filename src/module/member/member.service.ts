@@ -72,8 +72,22 @@ export class MemberService {
     return `This action returns all member`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} member`;
+  async findOne(userId,workspaceId) {
+    try {
+      const isMember = await this.prisma.member.findFirst({
+        where: {
+          userId: userId,
+          workspaceId
+        },
+      });
+
+      if(!isMember){
+        throw new NotFoundException("user does not belong to this worksplace")
+      }
+      return isMember
+    } catch (error) {
+      throw new InternalServerErrorException(error.message ||"something went wrong")
+    }
   }
 
   update(id: number, updateMemberDto: UpdateMemberDto) {

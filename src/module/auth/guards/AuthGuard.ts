@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { PrismaService } from 'src/prisma.services';
+import { TokenService } from '../token-verify.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -18,6 +19,7 @@ export class AuthGuard implements CanActivate {
     private readonly jwt: JwtService,
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly verifyTokenService:TokenService
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
@@ -27,12 +29,8 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('invalid token');
       }
       // verify the password
-      const decoded = await this.jwt.verifyAsync(token, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-      if (!decoded) {
-        throw new UnauthorizedException('invalid credentials');
-      }
+      const decoded = await this.verifyTokenService.verifyToken(token)
+      
       // find user
       const user = await this.prisma.user.findUnique({
         where: {

@@ -1,43 +1,54 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import { ConnectedSocket,WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { Socket,Server } from 'socket.io';
+import { Req } from '@nestjs/common';
+import { createSocketAuthMiddleware } from './middleware/createsocket.io.middleware';
+import { TokenService } from '../auth/token-verify.service';
+
+import { MemberService } from '../member/member.service';
+
+
 
 @WebSocketGateway()
-export class ChatGateway implements OnGatewayConnection,OnGatewayDisconnect {
-  constructor(private readonly chatService: ChatService) {}
-@WebSocketServer() server :Server
-  // listening to event and specify the pattern of thhe event wew ill listening
-  // socket.on
-  // first method using messageBody()
-  // @SubscribeMessage('createChat')
-  // create(@MessageBody() createChatDto: CreateChatDto) {
-  //   return this.chatService.create(createChatDto);
-  // }
-
-  // handle connection 
-  handleConnection(client: Socket, ...args: any[]) {
-    console.log("connected user",client.id)
-       this.server.emit('user-joined', {
-        message:`new user joined the chat ${client.id}`
-       });
+export class ChatGateway implements OnGatewayConnection {
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly tokenService: TokenService,
+    private readonly memberService: MemberService,
+  ) {}
+  @WebSocketServer() server: Server;
+  afterInit(server: Server) {
+    const authMiddleware = createSocketAuthMiddleware(
+      this.tokenService,
+      this.memberService,
+    );
+    server.use(authMiddleware);
+  }
+  // handle connection
+  async handleConnection(client: Socket) {
+    return this.chatService.handleConnection(client);
   }
 
-  handleDisconnect(client: Socket) {
-    console.log("disconnected user ",client.id)
-      this.server.emit('user-left', {
-        message: `user left the chat ${client.id}`,
-      });
-  }
-
-
-  // using second method emit which mean to send message 
+  // using second method emit which mean to send message
   @SubscribeMessage('createChat')
-  create(client:Socket,message:any) {
-    client.broadcast.emit("you have joine dthe chat")
-    this.server.emit('reply', 'this is broadcasting ');
-    return this.chatService.create(client,message);
+  async create(
+    @MessageBody() createChatDto: CreateChatDto,
+    @ConnectedSocket() client: Socket,
+    server: Server,
+  ) {
+     const { user, workspaceIdInfo } = client.data;
+    //  this.server.to(`workspace-${workspaceIdInfo}`).emit('receive-message', {
+    //    sender: user.sub
+    //  });
+
+  return  this.chatService.handleSendMessage(createChatDto, client, this.server);
+  }
+
+  @SubscribeMessage('typing')
+  handleTyping(client: Socket) {
+    return this.chatService.handleTyping(client);
   }
 
   @SubscribeMessage('findAllChat')

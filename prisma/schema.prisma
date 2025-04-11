@@ -22,11 +22,12 @@ model User {
   tasksCreated  Task[]         @relation("TaskCreatedBy")
   tasksAssigned Task[]         @relation("TaskAssignedTo")
   members       Member[]
-  comments      Comment[]
+ 
   files         File[]
   notifications Notification[]
   profile       Profile?       @relation(fields: [profileId], references: [id],onDelete: Cascade)
   profileId     String?        @unique
+  chatMessages   ChatMessages[]
 }
 
 model Profile {
@@ -49,6 +50,7 @@ model Workspace {
   projects Project[]
   tasks    Task[]
   members  Member[]
+  chatMessages  ChatMessages[]
 }
 
 model Project {
@@ -82,9 +84,9 @@ model Task {
   workspace   Workspace @relation(fields: [workspaceId], references: [id],onDelete: Cascade)
   workspaceId String
 
-  comments Comment[]
+
   files    File[]
-  subtasks Subtask[]
+  
 }
 
 model Member {
@@ -98,15 +100,15 @@ model Member {
   workspaceId String
 }
 
-model Comment {
+model ChatMessages {
   id        String   @id @default(uuid())
-  content   String
-  createdAt DateTime @default(now())
-
-  task   Task   @relation(fields: [taskId], references: [id],onDelete: Cascade)
-  taskId String
-  user   User   @relation(fields: [userId], references: [id],onDelete: Cascade)
-  userId String
+  content    String 
+  type        MessageType
+  workspace    Workspace @relation(fields: [workspaceId],references: [id])
+  workspaceId   String 
+  sender        User @relation(fields: [senderId],references: [id])
+  senderId     String 
+  createdAt    DateTime @default(now())
 }
 
 model File {
@@ -131,15 +133,7 @@ model Notification {
   userId String
 }
 
-model Subtask {
-  id        String     @id @default(uuid())
-  title     String
-  status    TaskStatus @default(TODO)
-  createdAt DateTime   @default(now())
 
-  parentTask   Task   @relation(fields: [parentTaskId], references: [id],onDelete: Cascade)
-  parentTaskId String
-}
 
 model UserRole {
   id         String       @id @default(uuid())
@@ -165,12 +159,17 @@ enum Priority {
 }
 
 enum Role {
+  
   ADMIN
   MEMBER
   OWNER
   VIEWER
 }
-
+enum MessageType {
+  TEXT
+  FILE
+  VOICE
+}
 enum Permission {
   CREATE_WORKSPACE
   DELETE_WORKSPACE

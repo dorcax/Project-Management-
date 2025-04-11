@@ -17,8 +17,7 @@ import {
 } from './entities/role.entity';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { MemberService } from '../member/member.service';
-import { permission } from 'process';
-import { Permission } from '@prisma/client';
+
 
 @Injectable()
 export class AuthService {
@@ -34,7 +33,7 @@ export class AuthService {
     const transaction = await this.prisma.$transaction(async (prisma) => {
       try {
         // find if user already registered
-        const existingUser = await this.prisma.user.findUnique({
+        const existingUser = await prisma.user.findUnique({
           where: {
             email,
           },
@@ -47,7 +46,7 @@ export class AuthService {
         const hashedPassword = await argon2.hash(password);
 
         //  create new user
-        const newUser = await this.prisma.user.create({
+        const newUser = await prisma.user.create({
           data: {
             name,
             email,
@@ -58,7 +57,7 @@ export class AuthService {
         // create new workspace
         const generateInviteCode =
           await this.workspaceService.generateInviteCode();
-        const workspace = await this.prisma.workspace.create({
+        const workspace = await prisma.workspace.create({
           data: {
             name: 'My workspace',
             description: `workspace created for ${newUser.name}`,
@@ -75,14 +74,14 @@ export class AuthService {
           await this.memberService.joinAWorkspaceByInvite(inviteCode,newUser.id);
         }
         // find role of the user
-        let roleMember = await this.prisma.userRole.findFirst({
+        let roleMember = await prisma.userRole.findFirst({
           where: {
             role: { equals:[ Role.OWNER] },
           },
         });
 
         if (!roleMember) {
-          roleMember = await this.prisma.userRole.create({
+          roleMember = await prisma.userRole.create({
             data: {
               role: [Role.OWNER],
               permission: ownerDefaultPermissions,
@@ -91,7 +90,7 @@ export class AuthService {
         }
 
         // create a new membership for the user
-        const member = await this.prisma.member.create({
+        const member = await prisma.member.create({
           data: {
             workspaceId: workspace.id,
             userId: newUser.id,
@@ -105,7 +104,7 @@ export class AuthService {
 
         //update the current user
         if (!inviteCode) {
-          const currentWorkspace = await this.prisma.user.update({
+          const currentWorkspace = await prisma.user.update({
             where: {
               id: newUser.id,
             },
@@ -131,7 +130,7 @@ export class AuthService {
   async login(loginAuthDto: LoginAuthDto) {
     try {
       const { email, password } = loginAuthDto;
-
+        console.log('Login request received for:', email);
       // find if user exist
 
       const existingUser = await this.prisma.user.findUnique({
@@ -191,13 +190,13 @@ export class AuthService {
             'Google user must have an email and name',
           );
         }
-        const user = await this.prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: {
             email: googleUser.email,
           },
         });
         if (user) return user;
-        const newUser = await this.prisma.user.create({
+        const newUser = await prisma.user.create({
           data: {
             email: googleUser.email,
             name: googleUser.name,
@@ -208,7 +207,7 @@ export class AuthService {
 
         // create new workspcae
         const inviteCode = await this.workspaceService.generateInviteCode();
-        const workspace = await this.prisma.workspace.create({
+        const workspace = await prisma.workspace.create({
           data: {
             name: 'My workspace',
             description: `workspace created for ${newUser.name}`,
@@ -222,14 +221,14 @@ export class AuthService {
         });
 
         // find role of the user
-        let roleMember = await this.prisma.userRole.findFirst({
+        let roleMember = await prisma.userRole.findFirst({
           where: {
             role: { equals: [Role.OWNER] },
           },
         });
 
         if (!roleMember) {
-          roleMember = await this.prisma.userRole.create({
+          roleMember = await prisma.userRole.create({
             data: {
               role: [Role.OWNER],
 
@@ -239,7 +238,7 @@ export class AuthService {
         }
 
         // create a new membership for the user
-        const member = await this.prisma.member.create({
+        const member = await prisma.member.create({
           data: {
             workspaceId: workspace.id,
             userId: newUser.id,
@@ -252,7 +251,7 @@ export class AuthService {
         });
 
         //update the current user
-        const currentWorkspace = await this.prisma.user.update({
+        const currentWorkspace = await prisma.user.update({
           where: {
             id: newUser.id,
           },

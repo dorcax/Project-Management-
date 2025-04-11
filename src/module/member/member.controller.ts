@@ -23,9 +23,9 @@ export class MemberController {
     return this.memberService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.memberService.findOne(+id);
+  @Get(':userId/:workkspaceId')
+  findOne(@Param('userId') userId: string,@Param("workspaceId") workspaceId:string) {
+    return this.memberService.findOne(userId,workspaceId);
   }
 
   @Patch(':id')
