@@ -1,37 +1,34 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator"
-import { Role } from "@prisma/client";
-// import { Permission } from "../entities/permission.entity";
-import { Permission } from '@prisma/client';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator"
+
+
 
 export class CreateAuthDto {
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   name: string;
+
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 
   @IsString()
   @IsNotEmpty()
+  password: string;
+
+  
+}
+
+
+export class LoginAuthDto {
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
   
   @IsOptional()
   @IsString()
   inviteCode?: string;
-
-  // @IsOptional()
-  @IsString()
-  password: string;
-
-  // role: Role;
-  // permission: Permission[];
-}
-
-
-
-export class LoginAuthDto {
-  @IsString()
-  @IsNotEmpty()
-  email: string;
-
-  @IsString()
-  @IsNotEmpty()
-  password: string;
 }

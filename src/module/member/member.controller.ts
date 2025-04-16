@@ -10,13 +10,13 @@ import { RolesandPermissions } from '../auth/decorator/role.decorator';
 export class MemberController {
   constructor(private readonly memberService: MemberService) {}
   
-  // @UseGuards(AuthGuard)
-  // // @RolesandPermissions()
-  // @Post()
-  // create(@Body() createMemberDto:CreateMemberDto,@Req() req) {
-  //   const userId=req.user.sub
-  //   return this.memberService.joinAWorkspaceByInvite(createMemberDto,userId);
-  // }
+  @UseGuards(AuthGuard)
+  // @RolesandPermissions()
+  @Post()
+  create(@Body() createMemberDto:CreateMemberDto,@Req() req) {
+    const userId=req.user.sub
+    return this.memberService.joinAWorkspaceByInvite(createMemberDto,userId);
+  }
 
   @Get()
   findAll() {

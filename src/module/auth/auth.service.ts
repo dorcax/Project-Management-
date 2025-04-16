@@ -17,6 +17,7 @@ import {
 } from './entities/role.entity';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { MemberService } from '../member/member.service';
+import { permission } from 'process';
 
 
 @Injectable()
@@ -28,7 +29,7 @@ export class AuthService {
     private readonly memberService: MemberService,
   ) {}
   async create(createAuthDto: CreateAuthDto) {
-    const { name, email, password, inviteCode } = createAuthDto;
+    const { name, email, password } = createAuthDto;
 
     const transaction = await this.prisma.$transaction(async (prisma) => {
       try {
@@ -70,13 +71,11 @@ export class AuthService {
           },
         });
 
-        if (inviteCode) {
-          await this.memberService.joinAWorkspaceByInvite(inviteCode,newUser.id);
-        }
+        
         // find role of the user
         let roleMember = await prisma.userRole.findFirst({
           where: {
-            role: { equals:[ Role.OWNER] },
+            role: {  has: Role.OWNER},
           },
         });
 
@@ -103,7 +102,6 @@ export class AuthService {
         });
 
         //update the current user
-        if (!inviteCode) {
           const currentWorkspace = await prisma.user.update({
             where: {
               id: newUser.id,
@@ -112,8 +110,6 @@ export class AuthService {
               currentWorkspaceId: workspace.id,
             },
           });
-        }
-
         return { message: 'user successfully registered', workspace, member };
       } catch (error) {
         console.log(error);
@@ -129,14 +125,24 @@ export class AuthService {
   // login
   async login(loginAuthDto: LoginAuthDto) {
     try {
-      const { email, password } = loginAuthDto;
-        console.log('Login request received for:', email);
+      const { email, password, inviteCode } = loginAuthDto;
+      console.log('Login request received for:', email);
       // find if user exist
 
       const existingUser = await this.prisma.user.findUnique({
         where: {
           email,
         },
+        include:{
+           members: {
+          include: {
+            role: true,
+            workspace: true,
+          },
+        },
+          projects:true,
+          
+        }
       });
       if (!existingUser) {
         throw new NotFoundException('user not found');
@@ -146,28 +152,16 @@ export class AuthService {
       const isMatch = await argon2.verify(existingUser.password, password);
       if (!isMatch) throw new UnauthorizedException('invalid credentials');
 
-      // find the role
-      const roleMember = await this.prisma.user.findUnique({
-        where: {
-          id: existingUser.id,
-        },
-        include: {
-          members: {
-            include:{
-              role:true
-            }
-          },
-        },
-      });
-
-      const token = await this.generateJwt(roleMember);
+      const token = await this.generateJwt(existingUser);
+      
       return {
+        message: 'user logged in',
         user: existingUser,
         token: token,
       };
     } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException('something went wrong');
+      
+      throw new InternalServerErrorException(error ||'something went wrong');
     }
   }
 
@@ -270,36 +264,30 @@ export class AuthService {
     return transaction;
   }
 
-  async generateJwt(roleMember) {
-    
-     const roles = roleMember.members
-       .flatMap((member) => member.role) 
-       .flatMap((roleObj) => roleObj.role); 
+  async generateJwt(existingUser) {
 
-
-    const rolePermissions = {};
-
-    roleMember.members.forEach((member) => {
-      member.role.forEach((roleObj) => {
-        const role = roleObj.role;
-        const permissions = roleObj.permission;
-
-        if (!rolePermissions[role]) {
-          rolePermissions[role] = [];
-        }
-
-        rolePermissions[role].push(...permissions);
-      });
-    });
+    // Filter to get the member info for the current workspace
+    const currentWorkspaceMember =existingUser.members.find((member)=>member.workspaceId === existingUser.currentWorkspaceId)
+    console.log(currentWorkspaceMember)
+    if (!currentWorkspaceMember) {
+      throw new BadRequestException(
+        'User is not part of the current workspace',
+      );
+    }
+   const roles =currentWorkspaceMember.role.flatMap((role)=>role.role) ||[]
+  const permissions = currentWorkspaceMember.role.flatMap((permission)=>permission.permission);
       const payload = {
-        sub: roleMember.id,
+        sub: existingUser.id,
         roles: roles,
-        rolePermissions: rolePermissions,
+        rolePermissions: permissions,
       };
      console.log('roles', payload);
     return this.jwt.signAsync(payload);
   }
 
+
+
+  
   async findallUser() {
     const users = await this.prisma.user.findMany({
       include: {

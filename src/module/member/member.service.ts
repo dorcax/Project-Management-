@@ -7,11 +7,13 @@ import { memberDefaultPermission, Role } from '../auth/entities/role.entity';
 @Injectable()
 export class MemberService {
   constructor(private readonly prisma:PrismaService){}
- async joinAWorkspaceByInvite(inviteCode,userId) {
+ async joinAWorkspaceByInvite(createMemberDto
+  :CreateMemberDto,userId) {
+    const{inviteCode} =createMemberDto
    const transaction=await this.prisma.$transaction(async(prisma)=>{
     try {
       // find workspace by invite
-      const workspace = await this.prisma.workspace.findUnique({
+      const workspace = await prisma.workspace.findUnique({
         where: {
           inviteCode: inviteCode,
         },
@@ -21,7 +23,7 @@ export class MemberService {
       }
 
       //  check if member is already a member
-      const existingMember = await this.prisma.member.findFirst({
+      const existingMember = await prisma.member.findFirst({
         where: {
           workspaceId: workspace.id,
           userId: userId,
@@ -35,7 +37,7 @@ export class MemberService {
       }
 
       // add user to a workspace
-      const newMember = await this.prisma.member.create({
+      const newMember = await prisma.member.create({
         data: {
           userId: userId,
           workspaceId: workspace.id,
@@ -48,7 +50,7 @@ export class MemberService {
         },
       });
       // update thier current workspace
-      const currentWorkspace = await this.prisma.user.update({
+      const currentWorkspace = await prisma.user.update({
         where: {
           id:userId,
         },
